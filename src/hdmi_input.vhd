@@ -552,10 +552,10 @@ hdmi_section_decode: process(clk_pixel)
             ------------------------------------------------------------
             vdp_prefix_detect <= vdp_prefix_detect(6 downto 0) & '0';
             vdp_prefix_seen <= '0';
-            if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch1_ctl_valid = '1' then
+            if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch2_ctl_valid = '1' then
                 if ch1_ctl = "01" and ch2_ctl = "00" then
                     vdp_prefix_detect(0) <=  '1';
-                    if vdp_prefix_detect = "01111111" then
+                    if vdp_prefix_detect(6 downto 0) = "1111111" then
                         vdp_prefix_seen <= '1';
                     end if;
                 end if;
@@ -569,10 +569,10 @@ hdmi_section_decode: process(clk_pixel)
             ---------------------------------------------
             adp_prefix_detect <= adp_prefix_detect(6 downto 0) & '0';
             adp_prefix_seen <= '0';
-            if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch1_ctl_valid = '1' then
+            if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch2_ctl_valid = '1' then
                 if ch1_ctl = "01" and ch2_ctl = "01" then
                     adp_prefix_detect(0) <= '1';
-                    if adp_prefix_detect = "01111111" then
+                    if adp_prefix_detect(6 downto 0) = "1111111" then
                         adp_prefix_seen <= '1';
                     end if;
                 end if;
@@ -584,7 +584,7 @@ hdmi_section_decode: process(clk_pixel)
             -- encoded in TERC4 coded in Ch0 - annoying!
             ---------------------------------------------
             adp_guardband_detect <= '0';
-            if in_vdp = '0' and ch0_terc4_valid = '1' and ch1_guardband_valid = '1' and ch1_guardband_valid = '1' then
+            if in_vdp = '0' and ch0_terc4_valid = '1' and ch1_guardband_valid = '1' and ch2_guardband_valid = '1' then
                 if ch0_terc4(3 downto 2) = "11" and ch1_guardband = "0" and ch2_guardband = "0" then
                     raw_vsync <= ch0_terc4(1);
                     raw_hsync <= ch0_terc4(0);
