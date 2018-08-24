@@ -1,26 +1,26 @@
 ----------------------------------------------------------------------------------
 -- Engineer: Mike Field <hamster@snap.net.nz>
--- 
+--
 -- Create Date: 30.07.2015 23:11:34
 -- Module Name: input_channel - Behavioral
 --
--- Description: Receiving one of the three HDMI input channels. and decoding 
--- 
+-- Description: Receiving one of the three HDMI input channels. and decoding
+--
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
--- 
+--
 -- Copyright (c) 2015 Michael Alan Field
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -36,7 +36,7 @@
 -- per day, it is equivalent to about 6 months of work. I'm more than happy
 -- to share it if you can make use of it. It is released under the MIT license,
 -- so you are not under any onus to say thanks, but....
--- 
+--
 -- If you what to say thanks for this design how about trying PayPal?
 --  Educational use - Enough for a beer
 --  Hobbyist use    - Enough for a pizza
@@ -83,7 +83,7 @@ architecture Behavioral of input_channel is
            serial      : in std_logic;
            data        : out std_logic_vector (9 downto 0));
     end component;
-    
+
     component TMDS_decoder is
     Port ( clk             : in  std_logic;
            symbol          : in  std_logic_vector (9 downto 0);
@@ -97,7 +97,7 @@ architecture Behavioral of input_channel is
            data_valid      : out std_logic;
            data            : out std_logic_vector (7 downto 0));
     end component;
-    
+
     component alignment_detect is
         Port ( clk            : in STD_LOGIC;
                invalid_symbol : in STD_LOGIC;
@@ -112,10 +112,23 @@ architecture Behavioral of input_channel is
     signal bitslip         : STD_LOGIC;
     signal symbol_sync_i   : STD_LOGIC;
     signal symbol_i        : std_logic_vector (9 downto 0);
+    signal symbol_f        : std_logic_vector (9 downto 0);
+    signal symbol_q        : std_logic_vector (9 downto 0);
     signal invalid_symbol_i: STD_LOGIC;
 
 begin
-    symbol <= symbol_i;
+    symbol <= symbol_q;
+
+    -- Transition symbol from clk_x1 to clk domain
+    process(clk)
+    begin
+        if falling_edge(clk) then
+            symbol_f <= symbol_i;
+        end if;
+        if rising_edge(clk) then
+            symbol_q <= symbol_f;
+        end if;
+    end process;
 
 i_deser: deserialiser_1_to_10 port map (
         clk_mgmt    => clk_mgmt,
@@ -143,9 +156,9 @@ i_decoder: tmds_decoder port map (
         data_valid      => data_valid,
         data            => data
     );
-    
+
     invalid_symbol <= invalid_symbol_i;
-     
+
 i_alignment_detect: alignment_detect port map (
            clk            => clk,
            invalid_symbol => invalid_symbol_i,
