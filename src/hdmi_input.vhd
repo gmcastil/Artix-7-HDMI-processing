@@ -494,10 +494,7 @@ hdmi_section_decode: process(clk_pixel)
             end if;
 
             ---------------------------------------------
-            -- See if we can detect the ADP guardband
-            --
-            -- The ADP guardband includes HSYNC and VSYNC
-            -- encoded in TERC4 coded in Ch0.
+            -- Watch for the Data Island Preamble
             ---------------------------------------------
             adp_prefix_detect <= adp_prefix_detect(6 downto 0) & '0';
             adp_prefix_seen <= '0';
@@ -518,8 +515,6 @@ hdmi_section_decode: process(clk_pixel)
             adp_guardband_detect <= '0';
             if in_vdp = '0' and ch0_terc4_valid = '1' and ch1_guardband_valid = '1' and ch2_guardband_valid = '1' then
                 if ch0_terc4(3 downto 2) = "11" and ch1_guardband = "0" and ch2_guardband = "0" then
-                    raw_vsync <= ch0_terc4(1);
-                    raw_hsync <= ch0_terc4(0);
                     adp_guardband_detect <= adp_prefix_seen;
                     in_adp <= adp_guardband_detect AND (not in_adp) and (not in_vdp);
                 end if;

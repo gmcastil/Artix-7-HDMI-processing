@@ -117,19 +117,6 @@ architecture Behavioral of input_channel is
     signal invalid_symbol_i: STD_LOGIC;
 
 begin
-    symbol <= symbol_q;
-
-    -- Transition symbol from clk_x1 to clk domain
-    process(clk)
-    begin
-        if falling_edge(clk) then
-            symbol_f <= symbol_i;
-        end if;
-        if rising_edge(clk) then
-            symbol_q <= symbol_f;
-        end if;
-    end process;
-
 i_deser: deserialiser_1_to_10 port map (
         clk_mgmt    => clk_mgmt,
         delay_ce    => delay_ce,
@@ -143,9 +130,22 @@ i_deser: deserialiser_1_to_10 port map (
         serial      => serial,
         data        => symbol_i);
 
+    -- Transition symbol from clk_x1 to clk domain
+    process(clk)
+    begin
+        if falling_edge(clk) then
+            symbol_f <= symbol_i;
+        end if;
+        if rising_edge(clk) then
+            symbol_q <= symbol_f;
+        end if;
+    end process;
+
+    symbol <= symbol_q;
+
 i_decoder: tmds_decoder port map (
         clk             => clk,
-        symbol          => symbol_i,
+        symbol          => symbol_q,
         invalid_symbol  => invalid_symbol_i,
         ctl_valid       => ctl_valid,
         ctl             => ctl,

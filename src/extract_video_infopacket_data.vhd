@@ -1,4 +1,5 @@
 ----------------------------------------------------------------------------------
+-- Engineer: Charles Steinkuehler <charles@steinkuehler.net>
 -- Engineer: Mike Field <hamster@snap.net.nz>
 --
 -- Module Name: extract_video_infopacket_data - Behavioral
@@ -11,9 +12,12 @@
 --              Bits 27:26 indicate if the pixels are studio level (16-240)
 --              or full range (0-255)
 --
+-- Modified by Charles Steinkuehler to work with long strings of packets in a
+-- single Data Island Period
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
 --
+-- Copyright (c) 2018 Charles Steinkuehler
 -- Copyright (c) 2015 Michael Alan Field
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -50,66 +54,54 @@
 --
 ----------------------------------------------------------------------------------
 
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity extract_video_infopacket_data is
-    Port ( clk                 : in STD_LOGIC;
-           adp_data_valid      : in STD_LOGIC;
-           adp_header_bit      : in STD_LOGIC;
-           adp_frame_bit       : in STD_LOGIC;
-           adp_subpacket0_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           adp_subpacket1_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           adp_subpacket2_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           adp_subpacket3_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           input_is_YCbCr      : out STD_LOGIC;
-           input_is_422        : out STD_LOGIC;
-           input_is_sRGB       : out STD_LOGIC);
+    Port (
+        clk                 : in  std_logic;
+
+        -- Data Island Packet Data
+        pkt_valid           : in  std_logic;
+        pkt_header          : in  std_logic_vector(31 downto 0);
+        pkt_subpacket0      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket1      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket2      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket3      : in  std_logic_vector(63 downto 0);
+
+        -- Extracted AVI InfoFrame Details
+        input_is_YCbCr      : out std_logic;
+        input_is_422        : out std_logic;
+        input_is_sRGB       : out std_logic);
 end extract_video_infopacket_data;
 
 architecture Behavioral of extract_video_infopacket_data is
-    -- For this usage, we are only interested in four bits that are all in the first
-    -- 16 transfers of the 32-bit packets
-    signal header_bits     : STD_LOGIC_VECTOR (15 downto 0);
-    signal frame_bits      : STD_LOGIC_VECTOR (15 downto 0);
-    signal subpacket0_bits : STD_LOGIC_VECTOR (31 downto 0);
-    signal updated         : std_logic := '0';
 begin
 
 process(clk)
     begin
         if rising_edge(clk) then
-            if adp_data_valid = '1' then
-                -----------------------------------------------
-                -- Move the incoming bits into a shift register
-                -----------------------------------------------
-                header_bits     <= adp_header_bit      & header_bits(header_bits'high downto 1);
-                frame_bits      <= adp_frame_bit       & frame_bits(frame_bits'high   downto 1);
-                subpacket0_bits <= adp_subpacket0_bits & subpacket0_bits(subpacket0_bits'high downto 2);
-                updated         <= '1';
-            end if;
+            if pkt_valid='1' then
+                -- AVI InfoFrame packet
+                if pkt_header(7 downto 0) = x"82" then
+                    -- Header version 2 or later
+                    if unsigned(pkt_header(15 downto 8)) >= 2 then
+                        -- Extract Y from packet byte 1
+                        case pkt_subpacket0(14 downto 13) is
+                            when "00"   => input_is_YCbCr <= '0'; input_is_422 <= '0';
+                            when "01"   => input_is_YCbCr <= '1'; input_is_422 <= '1';
+                            when "10"   => input_is_YCbCr <= '1'; input_is_422 <= '0';
+                            when others => NULL;
+                        end case;
 
-            ----------------------------------------------------
-            -- The 0 in frame bits indicates the start of packet
-            ----------------------------------------------------
-            if updated = '1' and frame_bits = x"FFFE" then
-                -- LSB is the type of packet, MSB is the version
-                -- AVI infoframe is type 0x82, version can be 2, 3, or 4
-                if header_bits(7 downto 0) = x"82" and
-                   unsigned(header_bits(15 downto 8)) >= 2 then
-                    case subpacket0_bits(14 downto 13) is
-                        when "00"   => input_is_YCbCr <= '0'; input_is_422 <= '0';
-                        when "01"   => input_is_YCbCr <= '1'; input_is_422 <= '1';
-                        when "10"   => input_is_YCbCr <= '1'; input_is_422 <= '0';
-                        when others => NULL;
-                    end case;
+                        -- Extract Q from packet byte 3
+                        case pkt_subpacket0(27 downto 26) is
+                            when "01"   => input_is_sRGB <= '1';
+                            when others => input_is_sRGB <= '0';
+                        end case;
 
-                    case subpacket0_bits(27 downto 26) is
-                        when "01"   => input_is_sRGB <= '1';
-                        when others => input_is_sRGB <= '0';
-                    end case;
-
+                    end if;
                 end if;
             end if;
         end if;
