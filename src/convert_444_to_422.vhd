@@ -86,10 +86,6 @@ architecture Behavioral of convert_444_to_422 is
 
     signal phase        : std_logic;
 
-    attribute mark_debug : string;
-    attribute mark_debug of phase           : signal is "true";
-    attribute mark_debug of blank_q         : signal is "true";
-
 begin
 
     process(clk)

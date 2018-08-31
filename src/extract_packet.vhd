@@ -89,12 +89,6 @@ architecture behavioral of extract_packet is
     signal valid_q          : std_logic;
     signal count            : unsigned(4 downto 0);
 
-    attribute mark_debug : string;
-    attribute mark_debug of header_bits     : signal is "true";
-    attribute mark_debug of subpacket0_bits : signal is "true";
-    attribute mark_debug of valid_q         : signal is "true";
-    attribute mark_debug of count           : signal is "true";
-
 begin
 
 process(clk)
