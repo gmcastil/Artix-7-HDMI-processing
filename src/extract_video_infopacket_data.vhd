@@ -83,7 +83,7 @@ process(clk)
     begin
         if rising_edge(clk) then
             if pkt_valid='1' then
-                -- AVI InfoFrame packet
+                -- AVI InfoFrame Packet
                 if pkt_header(7 downto 0) = x"82" then
                     -- Header version 2 or later
                     if unsigned(pkt_header(15 downto 8)) >= 2 then

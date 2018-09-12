@@ -188,44 +188,44 @@ architecture Behavioral of hdmi_io is
     -- first verify the ECC codes and recover any errors
     ------------------------------------------------------
     component extract_packet is
-        port (
-            clk                 : in  std_logic;
+    port (
+        clk                 : in  std_logic;
 
-            -- Raw input from the HDMI stream
-            adp_data_valid      : in  std_logic;
-            adp_header_bit      : in  std_logic;
-            adp_frame_bit       : in  std_logic;
-            adp_subpacket0_bits : in  std_logic_vector(1 downto 0);
-            adp_subpacket1_bits : in  std_logic_vector(1 downto 0);
-            adp_subpacket2_bits : in  std_logic_vector(1 downto 0);
-            adp_subpacket3_bits : in  std_logic_vector(1 downto 0);
+        -- Raw input from the HDMI stream
+        adp_data_valid      : in  std_logic;
+        adp_header_bit      : in  std_logic;
+        adp_frame_bit       : in  std_logic;
+        adp_subpacket0_bits : in  std_logic_vector(1 downto 0);
+        adp_subpacket1_bits : in  std_logic_vector(1 downto 0);
+        adp_subpacket2_bits : in  std_logic_vector(1 downto 0);
+        adp_subpacket3_bits : in  std_logic_vector(1 downto 0);
 
-            -- Extracted Data Island Packet
-            pkt_valid           : out std_logic;
-            pkt_header          : out std_logic_vector(31 downto 0);
-            pkt_subpacket0      : out std_logic_vector(63 downto 0);
-            pkt_subpacket1      : out std_logic_vector(63 downto 0);
-            pkt_subpacket2      : out std_logic_vector(63 downto 0);
-            pkt_subpacket3      : out std_logic_vector(63 downto 0)
-        );
+        -- Extracted Data Island Packet
+        pkt_valid           : out std_logic;
+        pkt_header          : out std_logic_vector(31 downto 0);
+        pkt_subpacket0      : out std_logic_vector(63 downto 0);
+        pkt_subpacket1      : out std_logic_vector(63 downto 0);
+        pkt_subpacket2      : out std_logic_vector(63 downto 0);
+        pkt_subpacket3      : out std_logic_vector(63 downto 0)
+    );
     end component;
 
     component extract_video_infopacket_data is
     port (
-    clk                 : in  std_logic;
+        clk                 : in  std_logic;
 
-    -- Data Island Packet Data
-    pkt_valid           : in  std_logic;
-    pkt_header          : in  std_logic_vector(31 downto 0);
-    pkt_subpacket0      : in  std_logic_vector(63 downto 0);
-    pkt_subpacket1      : in  std_logic_vector(63 downto 0);
-    pkt_subpacket2      : in  std_logic_vector(63 downto 0);
-    pkt_subpacket3      : in  std_logic_vector(63 downto 0);
+        -- Data Island Packet Data
+        pkt_valid           : in  std_logic;
+        pkt_header          : in  std_logic_vector(31 downto 0);
+        pkt_subpacket0      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket1      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket2      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket3      : in  std_logic_vector(63 downto 0);
 
-    -- Extracted AVI InfoFrame Details
-    input_is_YCbCr      : out std_logic;
-    input_is_422        : out std_logic;
-    input_is_sRGB       : out std_logic
+        -- Extracted AVI InfoFrame Details
+        input_is_YCbCr      : out std_logic;
+        input_is_422        : out std_logic;
+        input_is_sRGB       : out std_logic
     );
     end component;
 
@@ -249,17 +249,20 @@ architecture Behavioral of hdmi_io is
 
 
     component extract_audio_samples is
-    Port ( clk                 : in STD_LOGIC;
-           adp_data_valid      : in STD_LOGIC;
-           adp_header_bit      : in STD_LOGIC;
-           adp_frame_bit       : in STD_LOGIC;
-           adp_subpacket0_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           adp_subpacket1_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           adp_subpacket2_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           adp_subpacket3_bits : in STD_LOGIC_VECTOR (1 downto 0);
-           audio_de            : out STD_LOGIC;
-           audio_channel       : out STD_LOGIC_VECTOR (2 downto 0);
-           audio_sample        : out STD_LOGIC_VECTOR (23 downto 0));
+    Port (
+        clk                 : in STD_LOGIC;
+        -- Data Island Packet Data
+        pkt_valid           : in  std_logic;
+        pkt_header          : in  std_logic_vector(31 downto 0);
+        pkt_subpacket0      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket1      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket2      : in  std_logic_vector(63 downto 0);
+        pkt_subpacket3      : in  std_logic_vector(63 downto 0);
+        -- Extracted AVI InfoFrame Details
+        audio_de            : out STD_LOGIC;
+        audio_channel       : out STD_LOGIC_VECTOR (2 downto 0);
+        audio_sample        : out STD_LOGIC_VECTOR (23 downto 0)
+    );
     end component;
 
 
@@ -576,15 +579,14 @@ i_conversion_to_RGB: conversion_to_RGB
     ------------------------------------------------
 i_extract_audio_samples: extract_audio_samples PORT MAP (
        clk                 => pixel_clk_i,
-       -- ADP data
-       adp_data_valid      => adp_data_valid,
-       adp_header_bit      => adp_header_bit,
-       adp_frame_bit       => adp_frame_bit,
-       adp_subpacket0_bits => adp_subpacket0_bits,
-       adp_subpacket1_bits => adp_subpacket1_bits,
-       adp_subpacket2_bits => adp_subpacket2_bits,
-       adp_subpacket3_bits => adp_subpacket3_bits,
-       -- The stuff we need
+       -- Data Island Packet Data
+       pkt_valid           => pkt_valid,
+       pkt_header          => pkt_header,
+       pkt_subpacket0      => pkt_subpacket0,
+       pkt_subpacket1      => pkt_subpacket1,
+       pkt_subpacket2      => pkt_subpacket2,
+       pkt_subpacket3      => pkt_subpacket3,
+       -- Extracted Audio Data
        audio_de            => audio_de,
        audio_channel       => audio_channel,
        audio_sample        => audio_sample);
