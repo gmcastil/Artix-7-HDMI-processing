@@ -52,6 +52,9 @@ library UNISIM;
 use UNISIM.VComponents.all;
 
 entity hdmi_input is
+    generic (
+        UseBUFG : boolean := false
+    );
     Port (
         system_clk      : in  std_logic;
         clk_200         : in  std_logic;
@@ -325,31 +328,57 @@ hdmi_MMCME2_BASE_inst : MMCME2_BASE
       CLKFBIN   => clkfb_2        -- 1-bit input: Feedback clock
    );
 
-   ----------------------------------
-   -- Force the highest speed clock
-   -- through the IO clock buffer
-   -- (this is only rated for 600MHz!)
-   -----------------------------------
-BUFIO_x5_inst : BUFIO
-   port map (
-      I => clk_pixel_x5_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
-      O => clk_pixel_x5      -- 1-bit output: Clock output (connect to I/O clock loads).
-   );
+    ----------------------------------
+    -- Force the highest speed clock
+    -- through the IO clock buffer
+    -- (this is only rated for 600MHz!)
+    -----------------------------------
+    DoBUFMR : if UseBUFG generate
+    begin
+        BUFG_x5_inst : BUFG
+            port map (
+                I => clk_pixel_x5_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
+                O => clk_pixel_x5      -- 1-bit output: Clock output (connect to I/O clock loads).
+            );
 
-BUFIO_x1_inst : BUFG
-    port map (
-        I => clk_pixel_x1_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
-        O => clk_pixel_x1      -- 1-bit output: Clock output (connect to I/O clock loads).
-);
+        BUFG_x1_inst : BUFG
+            port map (
+                I => clk_pixel_x1_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
+                O => clk_pixel_x1      -- 1-bit output: Clock output (connect to I/O clock loads).
+            );
+    end generate;
+
+    NoBUFMR : if not UseBUFG generate
+    begin
+        BUFIO_x5_inst : BUFIO
+            port map (
+                I => clk_pixel_x5_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
+                O => clk_pixel_x5      -- 1-bit output: Clock output (connect to I/O clock loads).
+            );
+
+        BUFR_x1_inst : BUFR
+            generic map (
+                BUFR_DIVIDE => "BYPASS", -- Values: "BYPASS, 1, 2, 3, 4, 5, 6, 7, 8"
+                SIM_DEVICE => "7SERIES" -- Must be set to "7SERIES"
+            )
+            port map (
+                CLR => '0',
+                CE => '1',
+                I => clk_pixel_x1_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
+                O => clk_pixel_x1      -- 1-bit output: Clock output (connect to I/O clock loads).
+        );
+
+    end generate;
 
 BUFIO_inst : BUFG
     port map (
        I => clk_pixel_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
        O => clk_pixel      -- 1-bit output: Clock output (connect to I/O clock loads).
     );
+
       pixel_clk       <= clk_pixel;
-      pixel_io_clk_x1 <= clk_pixel_x1;
       pixel_io_clk_x5 <= clk_pixel_x5;
+      pixel_io_clk_x1 <= clk_pixel_x1;
 
 ch0: input_channel Port map (
         clk_mgmt        => system_clk,

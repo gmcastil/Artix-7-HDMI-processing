@@ -1,25 +1,25 @@
 ----------------------------------------------------------------------------------
 -- Engineer: Mike Field <hamster@snap.net.nz<
--- 
+--
 -- Module Name: hdmi_io - Behavioral
 --
 -- Description: Wrapper for input and output components of HDMI data stream
 --
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
--- 
+--
 -- Copyright (c) 2015 Michael Alan Field
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -35,7 +35,7 @@
 -- per day, it is equivalent to about 6 months of work. I'm more than happy
 -- to share it if you can make use of it. It is released under the MIT license,
 -- so you are not under any onus to say thanks, but....
--- 
+--
 -- If you what to say thanks for this design how about trying PayPal?
 --  Educational use - Enough for a beer
 --  Hobbyist use    - Enough for a pizza
@@ -51,14 +51,15 @@ use UNISIM.VComponents.all;
 
 entity hdmi_io is
     port (
-        clk100        : in STD_LOGIC;
+        clk100        : in  std_logic;
+        clk200        : in  std_logic;
         -------------------------------
         -- Control signals
         -------------------------------
         clock_locked   : out std_logic;
         data_synced    : out std_logic;
-        debug          : out std_logic_vector(7 downto 0);        
-        
+        debug          : out std_logic_vector(7 downto 0);
+
         -------------------------------
         --HDMI input signals
         -------------------------------
@@ -71,7 +72,7 @@ entity hdmi_io is
         hdmi_rx_clk_p : in    std_logic;
         hdmi_rx_n     : in    std_logic_vector(2 downto 0);
         hdmi_rx_p     : in    std_logic_vector(2 downto 0);
-        
+
         -------------
         -- HDMI out
         -------------
@@ -83,7 +84,7 @@ entity hdmi_io is
         hdmi_tx_rsda  : inout std_logic;
         hdmi_tx_p     : out   std_logic_vector(2 downto 0);
         hdmi_tx_n     : out   std_logic_vector(2 downto 0);
-        
+
         pixel_clk : out std_logic;
         -------------------------------
         -- VGA data recovered from HDMI
@@ -97,7 +98,7 @@ entity hdmi_io is
         in_blue   : out std_logic_vector(7 downto 0);
         is_interlaced   : out std_logic;
         is_second_field : out std_logic;
-        
+
         -----------------------------------
         -- VGA data to be converted to HDMI
         -----------------------------------
@@ -113,7 +114,7 @@ entity hdmi_io is
         audio_channel : out std_logic_vector(2 downto 0);
         audio_de      : out std_logic;
         audio_sample  : out std_logic_vector(23 downto 0);
-        
+
         -----------------------------------
         -- For symbol dump or retransmit
         -----------------------------------
@@ -132,27 +133,31 @@ architecture Behavioral of hdmi_io is
            edid_debug : out std_logic_vector(2 downto 0));
     end component;
 
-    component hdmi_input is 
+    component hdmi_input is
+    generic (
+        UseBUFG : boolean := false );
     port (
         system_clk      : in  std_logic;
+        clk_200         : in  std_logic;
 
-        debug           : out std_logic_vector(5 downto 0);        
+        debug           : out std_logic_vector(5 downto 0);
         hdmi_detected : out std_logic;
-        
+
         pixel_clk       : out std_logic;  -- Driven by BUFG
         pixel_io_clk_x1 : out std_logic;  -- Driven by BUFFIO
         pixel_io_clk_x5 : out std_logic;  -- Driven by BUFFIO
-    
+
         -- HDMI input signals
         hdmi_in_clk   : in    std_logic;
         hdmi_in_ch0   : in    std_logic;
         hdmi_in_ch1   : in    std_logic;
         hdmi_in_ch2   : in    std_logic;
-    
+
         -- Status
+        reset_o      : out std_logic;
         pll_locked   : out std_logic;
         symbol_sync  : out std_logic;
-    
+
         -- Raw data signals
         raw_blank : out std_logic;
         raw_hsync : out std_logic;
@@ -172,34 +177,58 @@ architecture Behavioral of hdmi_io is
         symbol_ch0   : out std_logic_vector(9 downto 0);
         symbol_ch1   : out std_logic_vector(9 downto 0);
         symbol_ch2   : out std_logic_vector(9 downto 0)
-        
+
     );
     end component;
-    
+
     -----------------------------------------------------
     -- This is a half-baked solution to extracting data
-    -- from ADP packets - just pipe the data thorugh and 
+    -- from ADP packets - just pipe the data thorugh and
     -- extract bits on the fly. A 'real' solution would
     -- first verify the ECC codes and recover any errors
     ------------------------------------------------------
-    component extract_video_infopacket_data is 
+    component extract_packet is
+        port (
+            clk                 : in  std_logic;
+
+            -- Raw input from the HDMI stream
+            adp_data_valid      : in  std_logic;
+            adp_header_bit      : in  std_logic;
+            adp_frame_bit       : in  std_logic;
+            adp_subpacket0_bits : in  std_logic_vector(1 downto 0);
+            adp_subpacket1_bits : in  std_logic_vector(1 downto 0);
+            adp_subpacket2_bits : in  std_logic_vector(1 downto 0);
+            adp_subpacket3_bits : in  std_logic_vector(1 downto 0);
+
+            -- Extracted Data Island Packet
+            pkt_valid           : out std_logic;
+            pkt_header          : out std_logic_vector(31 downto 0);
+            pkt_subpacket0      : out std_logic_vector(63 downto 0);
+            pkt_subpacket1      : out std_logic_vector(63 downto 0);
+            pkt_subpacket2      : out std_logic_vector(63 downto 0);
+            pkt_subpacket3      : out std_logic_vector(63 downto 0)
+        );
+    end component;
+
+    component extract_video_infopacket_data is
     port (
-        clk                 : in  std_logic;
-        -- ADP data
-        adp_data_valid      : in  std_logic;
-        adp_header_bit      : in  std_logic;
-        adp_frame_bit       : in  std_logic;
-        adp_subpacket0_bits : in  std_logic_vector(1 downto 0);
-        adp_subpacket1_bits : in  std_logic_vector(1 downto 0);
-        adp_subpacket2_bits : in  std_logic_vector(1 downto 0);
-        adp_subpacket3_bits : in  std_logic_vector(1 downto 0);
-        -- The stuff we need
-        input_is_YCbCr      : out std_Logic;
-        input_is_422        : out std_logic;
-        input_is_sRGB       : out std_Logic        
+    clk                 : in  std_logic;
+
+    -- Data Island Packet Data
+    pkt_valid           : in  std_logic;
+    pkt_header          : in  std_logic_vector(31 downto 0);
+    pkt_subpacket0      : in  std_logic_vector(63 downto 0);
+    pkt_subpacket1      : in  std_logic_vector(63 downto 0);
+    pkt_subpacket2      : in  std_logic_vector(63 downto 0);
+    pkt_subpacket3      : in  std_logic_vector(63 downto 0);
+
+    -- Extracted AVI InfoFrame Details
+    input_is_YCbCr      : out std_logic;
+    input_is_422        : out std_logic;
+    input_is_sRGB       : out std_logic
     );
     end component;
-    
+
     signal adp_data_valid      : std_logic;
     signal adp_header_bit      : std_logic;
     signal adp_frame_bit       : std_logic;
@@ -209,6 +238,15 @@ architecture Behavioral of hdmi_io is
     signal adp_subpacket3_bits : std_logic_vector(1 downto 0);
     signal is_interlaced_i     : std_logic;
     signal is_second_field_i   : std_logic;
+
+    -- Data Island Packet Data
+    signal pkt_valid            : std_logic;
+    signal pkt_header           : std_logic_vector(31 downto 0);
+    signal pkt_subpacket0       : std_logic_vector(63 downto 0);
+    signal pkt_subpacket1       : std_logic_vector(63 downto 0);
+    signal pkt_subpacket2       : std_logic_vector(63 downto 0);
+    signal pkt_subpacket3       : std_logic_vector(63 downto 0);
+
 
     component extract_audio_samples is
     Port ( clk                 : in STD_LOGIC;
@@ -256,7 +294,7 @@ architecture Behavioral of hdmi_io is
         in_ch2    : in std_logic_vector(7 downto 0);
         in_ch1    : in std_logic_vector(7 downto 0);
         in_ch0    : in std_logic_vector(7 downto 0);
-    
+
         -------------------
         -- Processed pixels
         -------------------
@@ -272,9 +310,9 @@ architecture Behavioral of hdmi_io is
     signal fourfourfour_blank : std_logic;
     signal fourfourfour_hsync : std_logic;
     signal fourfourfour_vsync : std_logic;
-    signal fourfourfour_U     : std_logic_vector(11 downto 0);  
-    signal fourfourfour_V     : std_logic_vector(11 downto 0);  
-    signal fourfourfour_W     : std_logic_vector(11 downto 0);  
+    signal fourfourfour_U     : std_logic_vector(11 downto 0);
+    signal fourfourfour_V     : std_logic_vector(11 downto 0);
+    signal fourfourfour_W     : std_logic_vector(11 downto 0);
 
     component conversion_to_RGB is
         port ( clk            : in std_Logic;
@@ -296,7 +334,7 @@ architecture Behavioral of hdmi_io is
                out_B          : out std_logic_vector(11 downto 0)
           );
     end component;
-    
+
     signal rgb_blank : std_logic;
     signal rgb_hsync : std_logic;
     signal rgb_vsync : std_logic;
@@ -305,11 +343,11 @@ architecture Behavioral of hdmi_io is
     signal rgb_B     : std_logic_vector(11 downto 0);   -- R or Cr
 
     component DVID_output is
-    Port ( 
+    Port (
         pixel_clk       : in std_logic;  -- Driven by BUFG
         pixel_io_clk_x1 : in std_logic;  -- Driven by BUFIO
         pixel_io_clk_x5 : in std_logic;  -- Driven by BUFIO
-        
+
         -- VGA Signals
         vga_blank       : in  std_logic;
         vga_hsync       : in  std_logic;
@@ -318,7 +356,7 @@ architecture Behavioral of hdmi_io is
         vga_blue        : in  std_logic_vector(7 downto 0);
         vga_green       : in  std_logic_vector(7 downto 0);
         data_valid      : in  std_logic;
-        
+
         --- HDMI out
         tmds_out_clk    : out   std_logic;
         tmds_out_ch0    : out   std_logic;
@@ -326,7 +364,7 @@ architecture Behavioral of hdmi_io is
         tmds_out_ch2    : out   std_logic
     );
     end component;
-   
+
     -- Clocks for the pixel clock domain
     signal pixel_clk_i     : std_logic;
     signal pixel_io_clk_x1 : std_logic;
@@ -352,8 +390,8 @@ begin
 
     debug(7)          <= raw_hsync;
     debug(6)          <= raw_vsync;
-    debug(5)          <= is_second_field_i;  
-    debug(4)          <= is_interlaced_i;      
+    debug(5)          <= is_second_field_i;
+    debug(4)          <= is_interlaced_i;
     debug(3 downto 0) <= (others => '0');
 
 i_edid_rom: edid_rom  port map (
@@ -367,7 +405,7 @@ i_edid_rom: edid_rom  port map (
     ---------------------
 in_clk_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
  port map ( I  => hdmi_rx_clk_p, IB => hdmi_rx_clk_n, O => tmds_in_clk);
- 
+
 in_rx0_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
  port map ( I  => hdmi_rx_p(0),  IB => hdmi_rx_n(0),  O  => tmds_in_ch0);
 
@@ -377,21 +415,24 @@ in_rx1_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
 in_rx2_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
  port map ( I  => hdmi_rx_p(2),  IB => hdmi_rx_n(2),  O  => tmds_in_ch2);
 
-i_hdmi_input : hdmi_input port map (
+i_hdmi_input : hdmi_input generic map ( UseBUFG => true )
+    port map (
         system_clk      => clk100,
+        clk_200         => clk200,
         debug           => open,
-        -- Pixel and serializer clocks 
+        -- Pixel and serializer clocks
         pixel_clk       => pixel_clk_i,
         pixel_io_clk_x1 => pixel_io_clk_x1,
-        pixel_io_clk_x5 => pixel_io_clk_x5,    
+        pixel_io_clk_x5 => pixel_io_clk_x5,
         --- HDMI input signals
         hdmi_in_clk   => tmds_in_clk,
         hdmi_in_ch0   => tmds_in_ch0,
         hdmi_in_ch1   => tmds_in_ch1,
         hdmi_in_ch2   => tmds_in_ch2,
-        -- are the HDMI symbols in sync? 
+        -- are the HDMI symbols in sync?
+        reset_o       => open,
         symbol_sync   => data_synced,
-        pll_locked    => clock_locked, 
+        pll_locked    => clock_locked,
         -- VGA internal Signals
         hdmi_detected => in_hdmi_detected,
         raw_blank     => raw_blank,
@@ -399,7 +440,7 @@ i_hdmi_input : hdmi_input port map (
         raw_vsync     => raw_vsync,
         raw_ch2       => raw_ch2,
         raw_ch1       => raw_ch1,
-        raw_ch0       => raw_ch0,    
+        raw_ch0       => raw_ch0,
         -- ADP data
         adp_data_valid      => adp_data_valid,
         adp_header_bit      => adp_header_bit,
@@ -415,10 +456,10 @@ i_hdmi_input : hdmi_input port map (
     );
 
     -------------------------------------
-    -- If the input data is in 422 format 
+    -- If the input data is in 422 format
     -- then convert it to 12-bit 444 data
     -------------------------------------
-i_expand_422_to_444: expand_422_to_444 Port map ( 
+i_expand_422_to_444: expand_422_to_444 Port map (
         clk          => pixel_clk_i,
         input_is_422 => input_is_422,
         ------------------
@@ -430,7 +471,7 @@ i_expand_422_to_444: expand_422_to_444 Port map (
         in_ch2    => raw_ch2,
         in_ch1    => raw_ch1,
         in_ch0    => raw_ch0,
-    
+
         -------------------
         -- Processed pixels
         -------------------
@@ -443,15 +484,15 @@ i_expand_422_to_444: expand_422_to_444 Port map (
     );
 
     is_interlaced   <= is_interlaced_i;
-    is_second_field <= is_second_field_i; 
-i_detect_interlace: detect_interlace Port map ( 
+    is_second_field <= is_second_field_i;
+i_detect_interlace: detect_interlace Port map (
     clk             => pixel_clk_i,
     hsync           => raw_hsync,
     vsync           => raw_vsync,
     is_interlaced   => is_interlaced_i,
     is_second_field => is_second_field_i);
 
-i_conversion_to_RGB: conversion_to_RGB 
+i_conversion_to_RGB: conversion_to_RGB
     port map (
            clk              => pixel_clk_i,
            ------------------------
@@ -487,21 +528,47 @@ i_conversion_to_RGB: conversion_to_RGB
     -- Extracting the Video Infopacket data we need
     -- to correctly convert the video data
     ------------------------------------------------
-i_extract_video_infopacket_data: extract_video_infopacket_data port map (
-    clk                 => pixel_clk_i,
-    -- ADP data
-    adp_data_valid      => adp_data_valid,
-    adp_header_bit      => adp_header_bit,
-    adp_frame_bit       => adp_frame_bit,
-    adp_subpacket0_bits => adp_subpacket0_bits,
-    adp_subpacket1_bits => adp_subpacket1_bits,
-    adp_subpacket2_bits => adp_subpacket2_bits,
-    adp_subpacket3_bits => adp_subpacket3_bits,
-    -- The stuff we need
-    input_is_YCbCr      => input_is_YCbCr,
-    input_is_422        => input_is_422,
-    input_is_sRGB       => input_is_sRGB 
-);
+    i_pkt : extract_packet
+        port map (
+            clk                 => pixel_clk_i,
+
+            -- Raw input from the HDMI stream
+            adp_data_valid      => adp_data_valid,
+            adp_frame_bit       => adp_frame_bit,
+            adp_header_bit      => adp_header_bit,
+            adp_subpacket0_bits => adp_subpacket0_bits,
+            adp_subpacket1_bits => adp_subpacket1_bits,
+            adp_subpacket2_bits => adp_subpacket2_bits,
+            adp_subpacket3_bits => adp_subpacket3_bits,
+
+            -- Extracted Data Island Packet
+            pkt_valid           => pkt_valid,
+            pkt_header          => pkt_header,
+            pkt_subpacket0      => pkt_subpacket0,
+            pkt_subpacket1      => pkt_subpacket1,
+            pkt_subpacket2      => pkt_subpacket2,
+            pkt_subpacket3      => pkt_subpacket3
+        );
+
+    -- Process AVI InfoFrame packets
+    i_avi : extract_video_infopacket_data
+    port map (
+        clk                 => pixel_clk_i,
+
+        -- Data Island Packet Data
+        pkt_valid           => pkt_valid,
+        pkt_header          => pkt_header,
+        pkt_subpacket0      => pkt_subpacket0,
+        pkt_subpacket1      => pkt_subpacket1,
+        pkt_subpacket2      => pkt_subpacket2,
+        pkt_subpacket3      => pkt_subpacket3,
+
+        -- Extracted AVI InfoFrame Details
+        input_is_YCbCr      => input_is_YCbCr,
+        input_is_422        => input_is_422,
+        input_is_sRGB       => input_is_sRGB
+    );
+
     ------------------------------------------------
     -- Processing the non-video data #2
     -- Extracting the Audio samples so we can display
@@ -525,11 +592,11 @@ i_extract_audio_samples: extract_audio_samples PORT MAP (
 ------------------------------------------------
 -- Outputting video data
 -----------------------------------------------
-i_DVID_output: DVID_output port map ( 
+i_DVID_output: DVID_output port map (
         pixel_clk       => pixel_clk_i,
         pixel_io_clk_x1 => pixel_io_clk_x1,
         pixel_io_clk_x5 => pixel_io_clk_x5,
-        
+
         data_valid      => '1',
         -- VGA Signals
         vga_blank     => out_blank,
@@ -538,7 +605,7 @@ i_DVID_output: DVID_output port map (
         vga_red       => out_red,
         vga_blue      => out_blue,
         vga_green     => out_green,
-        
+
         --- HDMI out
         tmds_out_clk  => tmds_out_clk,
         tmds_out_ch0  => tmds_out_ch0,
@@ -558,7 +625,7 @@ i_DVID_output: DVID_output port map (
     -----------------
 out_clk_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
     port map ( O  => hdmi_tx_clk_p, OB => hdmi_tx_clk_n, I => tmds_out_clk);
-    
+
 out_tx0_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
     port map ( O  => hdmi_tx_p(0), OB => hdmi_tx_n(0), I  => tmds_out_ch0);
 
@@ -568,16 +635,16 @@ out_tx1_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
 out_tx2_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
     port map ( O  => hdmi_tx_p(2), OB => hdmi_tx_n(2), I  => tmds_out_ch2);
 
-    -- Detect when VSYNC is held high for 8 cycles, so we can synchronise the capture of symbols 
+    -- Detect when VSYNC is held high for 8 cycles, so we can synchronise the capture of symbols
 process(pixel_clk_i)
     begin
         if rising_edge(pixel_clk_i) then
             if detect_sr = "11111111" and raw_vsync = '0' then
                 symbol_sync <= '1';
-            else    
+            else
                 symbol_sync <= '0';
             end if;
-            detect_sr <= detect_sr(6 downto 0) & raw_vsync; 
+            detect_sr <= detect_sr(6 downto 0) & raw_vsync;
         end if;
     end process;
 

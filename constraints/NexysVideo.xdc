@@ -7,7 +7,10 @@ set_property -dict { PACKAGE_PIN R4    IOSTANDARD LVCMOS33 } [get_ports { clk100
     create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk100]
     
 ##HDMI in
-create_clock -add -name hdmi_clk -period 6.7 -waveform {0 5} [get_ports hdmi_rx_clk_p]
+# 165 MHz
+#create_clock -add -name hdmi_clk -period 6.7 -waveform {0 5} [get_ports hdmi_rx_clk_p]
+# 74.25 MHz
+create_clock -add -name hdmi_clk -period 13.468 -waveform {0 5} [get_ports hdmi_rx_clk_p]
 
 set_property -dict { PACKAGE_PIN AA5   IOSTANDARD LVCMOS33 } [get_ports { hdmi_rx_cec }]; #IO_L10P_T1_34 Sch=hdmi_rx_cec
 set_property -dict { PACKAGE_PIN W4    IOSTANDARD TMDS_33  } [get_ports { hdmi_rx_clk_n }]; #IO_L12N_T1_MRCC_34 Sch=hdmi_rx_clk_n
