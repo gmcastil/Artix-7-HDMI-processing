@@ -67,7 +67,7 @@ set_property -dict {PACKAGE_PIN D18 IOSTANDARD LVCMOS33} [get_ports {led[3]}]
 
 
 
-create_clock -period 13.468 [get_ports hdmi_rx_clk_p]
+create_clock -period 6.734 [get_ports hdmi_rx_clk_p]
 
 ### I/O constraints ###
 # group data channel IODELAYE2 cells with the IDELAYCTRL
