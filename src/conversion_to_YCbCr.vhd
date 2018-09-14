@@ -110,9 +110,10 @@ architecture Behavioral of conversion_to_YCbCr is
     signal dc_fix       : dcfx_matrix;
 
     constant coef_identity : coef_matrix := (
-        0 => ( 0 => x"4000", 1 => x"0000", 2 => x"0000"),
-        1 => ( 0 => x"0000", 1 => x"4000", 2 => x"0000"),
-        2 => ( 0 => x"0000", 1 => x"0000", 2 => x"4000") );
+        --     0 => Blue     1 => Green    2 => Red
+        0 => ( 0 => x"4000", 1 => x"0000", 2 => x"0000"),   -- Cb
+        1 => ( 0 => x"0000", 1 => x"4000", 2 => x"0000"),   -- Y
+        2 => ( 0 => x"0000", 1 => x"0000", 2 => x"4000") ); -- Cr
 
     constant dc_identity : dcfx_matrix := (
         0 => ( 0 => x"000000000000", 1 => x"000000000000", 2 => x"000000000000"),
@@ -121,9 +122,10 @@ architecture Behavioral of conversion_to_YCbCr is
 
 
     constant coef_RGB2YCbCr : coef_matrix := (
-        0 => ( 0 => x"F995", 1 => x"EA6B", 2 => x"1C00"),
-        1 => ( 0 => x"0BA4", 1 => x"2728", 2 => x"03F5"),
-        2 => ( 0 => x"1C00", 1 => x"E7B8", 2 => x"FD6F") );
+        --     0 => Blue     1 => Green    2 => Red
+        0 => ( 0 => x"1C00", 1 => x"EA6B", 2 => x"F995"),   -- Cb
+        1 => ( 0 => x"03F5", 1 => x"2728", 2 => x"0BA4"),   -- Y
+        2 => ( 0 => x"FD6F", 1 => x"E7B8", 2 => x"1C00") ); -- Cr
 
     constant dc_RGB2YCbCr : dcfx_matrix := (
         0 => ( 0 => x"000000000000", 1 => x"000000000000", 2 => x"000002002000"),
@@ -133,9 +135,10 @@ architecture Behavioral of conversion_to_YCbCr is
 
     -- FIXME!!
     constant coef_sRGB2YCbCr : coef_matrix := (
-        0 => ( 0 => x"F995", 1 => x"EA6B", 2 => x"1C00"),
-        1 => ( 0 => x"0BA4", 1 => x"2728", 2 => x"03F5"),
-        2 => ( 0 => x"1C00", 1 => x"E7B8", 2 => x"FD6F") );
+        --     0 => Blue     1 => Green    2 => Red
+        0 => ( 0 => x"1C00", 1 => x"EA6B", 2 => x"F995"),   -- Cb
+        1 => ( 0 => x"03F5", 1 => x"2728", 2 => x"0BA4"),   -- Y
+        2 => ( 0 => x"FD6F", 1 => x"E7B8", 2 => x"1C00") ); -- Cr
 
     constant dc_sRGB2YCbCr : dcfx_matrix := (
         0 => ( 0 => x"000000000000", 1 => x"000000000000", 2 => x"000002002000"),
