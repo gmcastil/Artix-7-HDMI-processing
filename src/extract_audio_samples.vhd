@@ -72,13 +72,9 @@ entity extract_audio_samples is
 end extract_audio_samples;
 
 architecture Behavioral of extract_audio_samples is
-    signal header_bits        : STD_LOGIC_VECTOR (31 downto 0);
-    signal frame_bits         : STD_LOGIC_VECTOR (31 downto 0);
-    signal subpacket0_bits    : STD_LOGIC_VECTOR (63 downto 0);
-    signal subpacket1_bits    : STD_LOGIC_VECTOR (63 downto 0);
-    signal subpacket2_bits    : STD_LOGIC_VECTOR (63 downto 0);
-    signal subpacket3_bits    : STD_LOGIC_VECTOR (63 downto 0);
-    signal grab_other_channel : std_logic := '0';
+
+    signal grab_other_channel   : std_logic := '0';
+
 begin
 
 process(clk)
@@ -91,7 +87,7 @@ process(clk)
                 if pkt_header(7 downto 0) = x"02" then
                     audio_de            <= pkt_header(8);
                     audio_channel       <= "000";
-                    audio_sample        <= subpacket0_bits(23 downto 0);
+                    audio_sample        <= pkt_subpacket0(23 downto 0);
                     grab_other_channel  <= '1';
                 end if;
             end if;
@@ -99,7 +95,7 @@ process(clk)
             if grab_other_channel = '1' then
                 audio_de           <= pkt_header(8);
                 audio_channel      <= "001";
-                audio_sample       <= subpacket0_bits(47 downto 24);
+                audio_sample       <= pkt_subpacket0(47 downto 24);
                 grab_other_channel <= '0';
             end if;
         end if;
